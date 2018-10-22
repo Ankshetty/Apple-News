@@ -134,7 +134,7 @@ class ApplenewsPreviewController extends ControllerBase {
    *   An array of article dta.
    *
    * @return null|string
-   *   NULL if successful. URL for group of entities.
+   *   URL of the archive file if available, NULL otherwise.
    */
   protected function export($entity_id, $filename, $entity_archive, array $data) {
     $preview = $this->previewBuilder->setEntity($entity_id, $filename, $entity_archive, $data);
@@ -164,7 +164,7 @@ class ApplenewsPreviewController extends ControllerBase {
    *   An array of article dta.
    *
    * @return null|string
-   *   NULL if successful. URL for group of entities.
+   *   URL of the archive file if available, NULL otherwise.
    */
   protected function exportMultiple(array $entity_ids, $filename, $entity_archive, array $data) {
     $preview = $this->previewBuilder->setEntity(NULL, $filename, $entity_archive, $data);
