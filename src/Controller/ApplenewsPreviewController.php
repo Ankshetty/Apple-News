@@ -86,10 +86,9 @@ class ApplenewsPreviewController extends ControllerBase {
     $filename = NULL;
     $entity_archive = TRUE;
     $entity_id = $entity->id();
-    $entity_ids = [$entity_id];
 
     $data = $this->getDataArray($entity, $context);
-    $this->exportToFile($entity_id, $entity_ids, $filename, $entity_archive, $data);
+    $this->export($entity_id, $filename, $entity_archive, $data);
     $archive_path = $this->exportFilePath($entity_id);
     $archive = $archive_path . '.zip';
 
@@ -127,6 +126,34 @@ class ApplenewsPreviewController extends ControllerBase {
    *
    * @param int $entity_id
    *   Entity ID.
+   * @param string $filename
+   *   String filename.
+   * @param string $entity_archive
+   *   String path.
+   * @param array $data
+   *   An array of article dta.
+   *
+   * @return null|string
+   *   NULL if successful. URL for group of entities.
+   */
+  protected function export($entity_id, $filename, $entity_archive, array $data) {
+    $preview = $this->previewBuilder->setEntity($entity_id, $filename, $entity_archive, $data);
+
+    $file_url = $preview->getArchiveFilePath();
+    $preview->toFile();
+      try {
+        $preview->archive([$entity_id]);
+      }
+      catch (\Exception $e) {
+        $this->logger->error('Could not create archive: @err', ['@err' => $e->getMessage()]);
+        return NULL;
+      }
+      return $file_url;
+  }
+
+  /**
+   * Export articles to file.
+   *
    * @param array $entity_ids
    *   An array of entity IDs.
    * @param string $filename
@@ -136,33 +163,21 @@ class ApplenewsPreviewController extends ControllerBase {
    * @param array $data
    *   An array of article dta.
    *
-   * @return int|null|string
+   * @return null|string
    *   NULL if successful. URL for group of entities.
    */
-  protected function exportToFile($entity_id, array $entity_ids, $filename, $entity_archive, array $data) {
-    $preview = $this->previewBuilder->setEntity($entity_id, $filename, $entity_archive, $data);
+  protected function exportMultiple(array $entity_ids, $filename, $entity_archive, array $data) {
+    $preview = $this->previewBuilder->setEntity(NULL, $filename, $entity_archive, $data);
 
-    if (!empty($entity_id)) {
-      $preview->toFile();
-      try {
-        $preview->archive($entity_ids);
-      }
-      catch (\Exception $e) {
-        $this->logger->error('Could not create archive: @err', ['@err' => $e->getMessage()]);
-      }
+    $file_url = $preview->getArchiveFilePath();
+    try {
+      $preview->archive($entity_ids);
+    }
+    catch (\Exception $e) {
+      $this->logger->error('Could not create archive: @err', ['@err' => $e->getMessage()]);
       return NULL;
     }
-    else {
-      $file_url = $preview->getArchiveFilePath();
-      try {
-        $preview->archive($entity_ids);
-      }
-      catch (\Exception $e) {
-        $this->logger->error('Could not create archive: @err', ['@err' => $e->getMessage()]);
-        return NULL;
-      }
-      return $file_url;
-    }
+    return $file_url;
   }
 
   /**
