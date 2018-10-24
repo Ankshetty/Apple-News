@@ -170,6 +170,7 @@ class ApplenewsDestinationMetadata extends ApplenewsDestinationSingleton {
     if ($this->getSetting('canonicalURL')) {
       $uri = entity_uri($this->export->entityType(), $this->export->source);
       $uri['options']['absolute'] = TRUE;
+      $uri['options']['https'] = variable_get('https', FALSE);
       $metadata->setCanonicalURL(url($uri['path'], $uri['options']));
     }
 
