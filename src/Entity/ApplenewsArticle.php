@@ -163,10 +163,13 @@ class ApplenewsArticle extends ContentEntityBase {
    * @param string|null $format
    *   String format.
    *
-   * @return string
+   * @return string|null
    *   String formatted date
    */
   protected function formatDate($date, $type = 'medium', $format = NULL) {
+    if (!$date) {
+      return NULL;
+    }
     /** @var \Drupal\Core\Datetime\DateFormatter $date_formatter */
     $date_formatter = \Drupal::service('date.formatter');
     $created = DrupalDateTime::createFromFormat('Y-m-d\TH:i:s\Z', $date);
