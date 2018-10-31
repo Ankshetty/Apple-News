@@ -232,7 +232,10 @@ class ApplenewsManager {
     foreach ($fields as $field_name => $detail) {
       $article = self::getArticle($entity, $field_name);
       if ($article) {
+        // Delete article from remote.
         $this->doDelete($article->getArticleId());
+        // Delete corresponding applenews_article entity.
+        $article->delete();
       }
     }
   }

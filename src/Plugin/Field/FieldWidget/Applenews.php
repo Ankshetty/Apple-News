@@ -68,7 +68,7 @@ class Applenews extends WidgetBase {
           '#title' => $this->t('Share URL'),
           '#markup' => $this->t('<a href=":url">:url</a>', [':url' => $article->getShareUrl()]),
         ];
-        $delete_url = Url::fromRoute('applenews.remote.article_delete', ['channel_id' => '121-12121-sdf-121', 'article_id' => $article->getArticleId()]);
+        $delete_url = Url::fromRoute('applenews.remote.article_delete', ['entity_type' => $entity->getEntityTypeId(), 'entity' => $entity->id()]);
         $element['delete'] = [
           '#type' => 'item',
           '#title' => $this->t('Delete'),
