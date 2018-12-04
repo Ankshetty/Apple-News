@@ -30,13 +30,20 @@ class Applenews extends WidgetBase {
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
     $field_name = $items->getName();
     $default_channels = unserialize($items[$delta]->channels);
+    $channels = $this->getChannels();
+
     /** @var \Drupal\Core\Entity\ContentEntityInterface $entity */
     $entity = $items->getEntity();
     $element['#attached']['library'][] = 'applenews/drupal.applenews.admin';
     $templates = $this->getTemplates($entity);
     $article = ApplenewsManager::getArticle($entity, $field_name);
 
-    if (!$templates) {
+    if (empty($channels)) {
+      $element['message'] = [
+        '#markup' => $this->t('There are no channels available. To set up a channel, review the <a href=":url">Apple news Settings</a>.', [':url' => Url::fromRoute('entity.applenews_template.collection')->toString()]),
+      ];
+    }
+    elseif (!$templates) {
       $element['message'] = [
         '#markup' => $this->t('Add a template to %type type. Check Apple news Template <a href=":url">configuration</a> page.', ['%type' => $entity->bundle(), ':url' => Url::fromRoute('entity.applenews_template.collection')->toString()]),
       ];
