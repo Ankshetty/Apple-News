@@ -120,6 +120,9 @@ class Applenews extends WidgetBase {
             'visible' => [
               ':input[name="' . $items->getName() . '[' . $delta . '][status]"]' => ['checked' => TRUE],
             ],
+            'checked' => [
+              ':input[data-section-of="' . $channel_key . '"]' => ['checked' => TRUE],
+            ],
           ],
         ];
         foreach ($channel->getSections() as $section_id => $section_label) {
