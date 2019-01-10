@@ -296,7 +296,7 @@ class ApplenewsManager {
    * @return string
    *   JSON string document.
    */
-  protected function getDocumentDataFromEntity(EntityInterface $entity, $template) {
+  public function getDocumentDataFromEntity(EntityInterface $entity, $template) {
     global $base_url;
     $context['template_id'] = $template;
     /** @var \ChapterThree\AppleNewsAPI\Document $document */

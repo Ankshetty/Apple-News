@@ -2,6 +2,7 @@
 
 namespace Drupal\applenews\Controller;
 
+use Drupal\applenews\ApplenewsManager;
 use Drupal\applenews\ApplenewsPreviewBuilder;
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Controller\ControllerBase;
@@ -40,6 +41,13 @@ class ApplenewsPreviewController extends ControllerBase {
   protected $previewBuilder;
 
   /**
+   * Apple News Manager.
+   *
+   * @var \Drupal\applenews\ApplenewsManager
+   */
+  protected $applenewsManager;
+
+  /**
    * ApplenewsPreviewController constructor.
    *
    * @param \Psr\Log\LoggerInterface $logger
@@ -48,11 +56,14 @@ class ApplenewsPreviewController extends ControllerBase {
    *   Serializer object.
    * @param \Drupal\applenews\ApplenewsPreviewBuilder $preview_builder
    *   Preview builder object.
+   * @param \Drupal\applenews\ApplenewsManager $manager
+   *   Apple news manager.
    */
-  public function __construct(LoggerInterface $logger, Serializer $serializer, ApplenewsPreviewBuilder $preview_builder) {
+  public function __construct(LoggerInterface $logger, Serializer $serializer, ApplenewsPreviewBuilder $preview_builder, ApplenewsManager $manager) {
     $this->logger = $logger;
     $this->serializer = $serializer;
     $this->previewBuilder = $preview_builder;
+    $this->applenewsManager = $manager;
   }
 
   /**
@@ -62,7 +73,8 @@ class ApplenewsPreviewController extends ControllerBase {
     return new static(
       $container->get('logger.channel.applenews'),
       $container->get('serializer'),
-      $container->get('applenews.preview_builder')
+      $container->get('applenews.preview_builder'),
+      $container->get('applenews.manager')
     );
   }
 
@@ -82,12 +94,11 @@ class ApplenewsPreviewController extends ControllerBase {
    *   Response object.
    */
   public function preview($entity_type, EntityInterface $entity, $revision_id, $template_id) {
-    $context['template_id'] = $template_id;
     $filename = NULL;
     $entity_archive = TRUE;
     $entity_id = $entity->id();
 
-    $data = $this->getDataArray($entity, $context);
+    $data = $this->getDataArray($entity);
     $this->export($entity_id, $filename, $entity_archive, $data);
     $archive_path = $this->exportFilePath($entity_id);
     $archive = $archive_path . '.zip';
@@ -105,18 +116,15 @@ class ApplenewsPreviewController extends ControllerBase {
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   Entity article attached to.
-   * @param array $context
-   *   An array of context.
    *
    * @return array
    *   An array of article data.
    */
-  protected function getDataArray(EntityInterface $entity, array $context) {
-    /** @var \ChapterThree\AppleNewsAPI\Document $document */
-    $document = $this->serializer->normalize($entity, 'applenews', $context);
+  protected function getDataArray(EntityInterface $entity) {
+    $document = $this->applenewsManager->getDocumentDataFromEntity($entity, 'applenews');
 
     return [
-      'json' => Json::encode($document),
+      'json' => $document,
       'files' => [],
     ];
   }
