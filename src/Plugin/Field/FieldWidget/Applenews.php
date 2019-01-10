@@ -155,7 +155,7 @@ class Applenews extends WidgetBase {
           ],
         ],
       ];
-      if ($article) {
+      if ($article && extension_loaded('zip')) {
         $url_preview = Url::fromRoute('applenews.preview_download', [
           'entity_type' => $entity->getEntityTypeId(),
           'entity' => $entity->id(),
