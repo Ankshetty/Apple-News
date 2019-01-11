@@ -98,7 +98,7 @@ class ApplenewsPreviewController extends ControllerBase {
     $entity_archive = TRUE;
     $entity_id = $entity->id();
 
-    $data = $this->getDataArray($entity);
+    $data = $this->getDataArray($entity, $template_id);
     $this->export($entity_id, $filename, $entity_archive, $data);
     $archive_path = $this->exportFilePath($entity_id);
     $archive = $archive_path . '.zip';
@@ -116,12 +116,14 @@ class ApplenewsPreviewController extends ControllerBase {
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   Entity article attached to.
+   * @param string $template_id
+   *   String template ID.
    *
    * @return array
    *   An array of article data.
    */
-  protected function getDataArray(EntityInterface $entity) {
-    $document = $this->applenewsManager->getDocumentDataFromEntity($entity, 'applenews');
+  protected function getDataArray(EntityInterface $entity, $template_id) {
+    $document = $this->applenewsManager->getDocumentDataFromEntity($entity, $template_id);
 
     return [
       'json' => $document,
