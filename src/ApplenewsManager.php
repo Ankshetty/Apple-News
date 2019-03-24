@@ -310,7 +310,6 @@ class ApplenewsManager {
         }
         $component->setText(Html::transformRootRelativeUrlsToAbsolute($component->getText(), $base_url));
       }
-      $component->setText(Html::transformRootRelativeUrlsToAbsolute($component->getText(), $base_url));
     }
     return Json::encode($document);
   }
