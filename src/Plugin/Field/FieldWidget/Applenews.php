@@ -177,7 +177,7 @@ class Applenews extends WidgetBase {
     // in this tab-set.
     if (isset($form['advanced'])) {
       // Override widget title to be helpful for end users.
-      $element['#title'] = $this->t('Applenews settings');
+      $element['#title'] = $this->t('Apple News settings');
 
       $element += [
         '#type' => 'details',
@@ -185,6 +185,7 @@ class Applenews extends WidgetBase {
         '#attributes' => [
           'class' => ['applenews-' . Html::getClass($entity->getEntityTypeId()) . '-settings-form'],
         ],
+        '#open' => isset($article) && $items->status,
       ];
     }
 
