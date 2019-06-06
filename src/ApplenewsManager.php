@@ -9,10 +9,12 @@ use Drupal\Component\Utility\Html;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Serializer\Serializer;
 
 /**
@@ -57,6 +59,13 @@ class ApplenewsManager {
   protected $publisher;
 
   /**
+   * Logger.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * ApplenewsManager constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -71,14 +80,60 @@ class ApplenewsManager {
    *   Serializer.
    * @param \Drupal\applenews\PublisherInterface $publisher
    *   Apple news publisher.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   Logger.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, TranslationInterface $string_translation, Serializer $serializer, PublisherInterface $publisher) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, TranslationInterface $string_translation, Serializer $serializer, PublisherInterface $publisher, LoggerInterface $logger) {
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->config = $config_factory->get('applenews.settings');
     $this->stringTranslation = $string_translation;
     $this->serializer = $serializer;
     $this->publisher = $publisher;
+    $this->logger = $logger;
+  }
+
+  /**
+   * Callback for hook_entity_insert and hook_entity_update.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity being inserted or updated.
+   */
+  public function entitySave(EntityInterface $entity) {
+    try {
+      // On successful post, save response details on entity.
+      $this->postArticle($entity);
+    }
+    catch (\Exception $e) {
+      $this->logger->error(sprintf('Error while trying to save an article in Apple News: %s', $e->getMessage()));
+    }
+  }
+
+  /**
+   * Callback for hook_entity_presave.
+   *
+   * Enforce properties of the Apple News field(s) based on published status if
+   * known.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   Entity being saved.
+   */
+  public function entityPreSave(EntityInterface $entity) {
+    $fields = $this->getFields($entity->getEntityTypeId());
+    if (!$fields) {
+      return;
+    }
+
+    /** @var \Drupal\Core\Entity\ContentEntityInterface $entity $fields */
+    foreach ($fields as $field_name => $detail) {
+      // For cases like migration, entity might not have the field.
+      if (!$entity->hasField($field_name)) {
+        continue;
+      }
+      $field = $entity->get($field_name);
+      // Force preview if we can determine that the entity is unpublished.
+      $field->is_preview = $field->is_preview || ($entity instanceof EntityPublishedInterface && !$entity->isPublished());
+    }
   }
 
   /**
