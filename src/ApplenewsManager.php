@@ -133,7 +133,7 @@ class ApplenewsManager {
         foreach ($channels as $channel_id => $sections) {
           // Publish for the first time.
           if (!$field->article) {
-            $data['metadata'] = $this->getMetaData($sections);
+            $data['metadata'] = $this->getMetaData($sections, NULL, $field->is_preview);
             $response = $this->doPost($channel_id, $data);
             $article = ApplenewsArticle::create([
               'entity_id' => $entity->id(),
@@ -146,7 +146,7 @@ class ApplenewsManager {
             /** @var \Drupal\applenews\Entity\ApplenewsArticle $article */
             $article = $field->article;
             // hook_entity_update get called on ->save(). Avoid multiple calls.
-            $data['metadata'] = $this->getMetaData($sections, $article->getRevision());
+            $data['metadata'] = $this->getMetaData($sections, $article->getRevision(), $field->is_preview);
             $response = $this->doUpdate($article->getArticleId(), $data);
             $article->updateFromResponse($response)->save();
           }
@@ -163,11 +163,13 @@ class ApplenewsManager {
    *   An array of section ids.
    * @param null|string $revision_id
    *   Revision ID for article update.
+   * @param bool $is_preview
+   *   Is the article published as a preview.
    *
    * @return string
    *   JSON metadata string.
    */
-  protected function getMetadata(array $sections, $revision_id = NULL) {
+  protected function getMetadata(array $sections, $revision_id = NULL, $is_preview = FALSE) {
     foreach ($sections as $section_id => $flag) {
       $section_urls[] = $this->config->get('endpoint') . '/sections/' . $section_id;
     }
@@ -175,6 +177,7 @@ class ApplenewsManager {
       'links' => [
         'sections' => $section_urls,
       ],
+      'isPreview' => $is_preview,
     ];
     if ($revision_id) {
       $data['revision'] = $revision_id;
