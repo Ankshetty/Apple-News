@@ -7,11 +7,13 @@ use Drupal\applenews\Entity\ApplenewsArticle;
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
+use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Psr\Log\LoggerInterface;
@@ -102,7 +104,7 @@ class ApplenewsManager {
   public function entitySave(EntityInterface $entity) {
     try {
       // On successful post, save response details on entity.
-      $this->postArticle($entity);
+      $this->syncToAppleNews($entity);
     }
     catch (\Exception $e) {
       $this->logger->error(sprintf('Error while trying to save an article in Apple News: %s', $e->getMessage()));
@@ -162,14 +164,28 @@ class ApplenewsManager {
    * @return bool
    *   Response of post. TRUE if successful.
    *
-   * @throws \Drupal\Core\Entity\EntityStorageException
+   * @deprecated Use \Drupal\applenews\ApplenewsManager::entitySave instead.
    */
   public function postArticle(EntityInterface $entity) {
     $fields = $this->getFields($entity->getEntityTypeId());
     if (!$fields) {
       return FALSE;
     }
+    $this->syncToAppleNews($entity);
+    return TRUE;
+  }
 
+  /**
+   * Sync the entity to Apple News.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to be sync'd.
+   */
+  protected function syncToAppleNews(EntityInterface $entity) {
+    $fields = $this->getFields($entity->getEntityTypeId());
+    if (!$fields) {
+      return;
+    }
     /** @var \Drupal\Core\Entity\ContentEntityInterface $entity $fields */
     foreach ($fields as $field_name => $detail) {
       // For cases like migration, entity might not have the field.
@@ -178,37 +194,52 @@ class ApplenewsManager {
       }
       $field = $entity->get($field_name);
       if ($field->status) {
-        $template = $field->template;
-        $channels = unserialize($field->channels);
-        $document = $this->getDocumentDataFromEntity($entity, $template);
-        $data = [
-          'json' => $document,
-          // 'files' => ''.
-        ];
-        foreach ($channels as $channel_id => $sections) {
-          // Publish for the first time.
-          if (!$field->article) {
-            $data['metadata'] = $this->getMetaData($sections, NULL, $field->is_preview);
-            $response = $this->doPost($channel_id, $data);
-            $article = ApplenewsArticle::create([
-              'entity_id' => $entity->id(),
-              'entity_type' => $entity->getEntityType()->id(),
-              'field_name' => $field_name,
-            ]);
-            $article->updateFromResponse($response)->save();
-          }
-          else {
-            /** @var \Drupal\applenews\Entity\ApplenewsArticle $article */
-            $article = $field->article;
-            // hook_entity_update get called on ->save(). Avoid multiple calls.
-            $data['metadata'] = $this->getMetaData($sections, $article->getRevision(), $field->is_preview);
-            $response = $this->doUpdate($article->getArticleId(), $data);
-            $article->updateFromResponse($response)->save();
-          }
-        }
+        // Post the article to Apple News.
+        $this->saveToAppleNews($entity, $field);
+      }
+      elseif ($field->article) {
+        // Delete the article from Apple News.
+        $this->deleteByField($entity, $field);
       }
     }
-    return TRUE;
+  }
+
+  /**
+   * Save the given entity for the given Apple News field to Apple News.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   Entity to save to Apple News.
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   Apple News field with the details for saving to Apple News.
+   */
+  protected function saveToAppleNews(EntityInterface $entity, FieldItemListInterface $field) {
+    $template = $field->template;
+    $channels = unserialize($field->channels);
+    $document = $this->getDocumentDataFromEntity($entity, $template);
+    $data = [
+      'json' => $document,
+    ];
+    foreach ($channels as $channel_id => $sections) {
+      // Publish for the first time.
+      if (!$field->article) {
+        $data['metadata'] = $this->getMetaData($sections, NULL, $field->is_preview);
+        $response = $this->doPost($channel_id, $data);
+        $article = ApplenewsArticle::create([
+          'entity_id' => $entity->id(),
+          'entity_type' => $entity->getEntityType()->id(),
+          'field_name' => $field->getName(),
+        ]);
+        $article->updateFromResponse($response)->save();
+      }
+      else {
+        /** @var \Drupal\applenews\Entity\ApplenewsArticle $article */
+        $article = $field->article;
+        // hook_entity_update get called on ->save(). Avoid multiple calls.
+        $data['metadata'] = $this->getMetaData($sections, $article->getRevision(), $field->is_preview);
+        $response = $this->doUpdate($article->getArticleId(), $data);
+        $article->updateFromResponse($response)->save();
+      }
+    }
   }
 
   /**
@@ -297,6 +328,25 @@ class ApplenewsManager {
         // Delete corresponding applenews_article entity.
         $article->delete();
       }
+    }
+  }
+
+  /**
+   * Delete the article for the given entity and Apple News field pair.
+   *
+   * @param \Drupal\Core\Entity\EntityInterface $entity
+   *   The entity to delete the Apple News article for.
+   * @param \Drupal\Core\Field\FieldItemListInterface $field
+   *   The Apple News field to delete the article for.
+   */
+  public function deleteByField(EntityInterface $entity, FieldItemListInterface $field) {
+    /** @var \Drupal\applenews\Entity\ApplenewsArticle $article */
+    $article = self::getArticle($entity, $field->getName());
+    if ($article) {
+      // Delete article from remote.
+      $this->doDelete($article->getArticleId());
+      // Delete corresponding applenews_article entity.
+      $article->delete();
     }
   }
 
