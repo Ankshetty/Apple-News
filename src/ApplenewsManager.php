@@ -7,7 +7,6 @@ use Drupal\applenews\Entity\ApplenewsArticle;
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\Entity;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityPublishedInterface;
@@ -121,17 +120,10 @@ class ApplenewsManager {
    *   Entity being saved.
    */
   public function entityPreSave(EntityInterface $entity) {
-    $fields = $this->getFields($entity->getEntityTypeId());
-    if (!$fields) {
-      return;
-    }
+    $fields = $this->getFields($entity->getEntityTypeId(), $entity);
 
     /** @var \Drupal\Core\Entity\ContentEntityInterface $entity $fields */
-    foreach ($fields as $field_name => $detail) {
-      // For cases like migration, entity might not have the field.
-      if (!$entity->hasField($field_name)) {
-        continue;
-      }
+    foreach (array_keys($fields) as $field_name) {
       $field = $entity->get($field_name);
       // Force preview if we can determine that the entity is unpublished.
       $field->is_preview = $field->is_preview || ($entity instanceof EntityPublishedInterface && !$entity->isPublished());
@@ -139,16 +131,44 @@ class ApplenewsManager {
   }
 
   /**
-   * {@inheritdoc}
+   * Get all Apple News fields for the given entity type.
+   *
+   * Optionally you can pass a specific entity to only return the Apple News
+   * fields that apply to that entity. This is useful for cases like migration,
+   * where the entity might not have the field.
+   *
+   * @param string $entity_type_id
+   *   Entity type id.
+   * @param \Drupal\Core\Entity\EntityInterface|null $entity
+   *   Entity which the Apple News fields should be present on.
+   *
+   * @return array
+   *   Associative array with the keys being field names and value is an array
+   *   with two entries:
+   *   - type: The field type.
+   *   - bundles: An associative array of the bundles in which the field
+   *     appears, where the keys and values are both the bundle's machine name.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   *   When the given entity type id does not exist.
    */
-  public function getFields($entity_type_id) {
+  public function getFields($entity_type_id, EntityInterface $entity = null) {
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
     if (!$entity_type->entityClassImplements(FieldableEntityInterface::class)) {
       return [];
     }
 
-    $map = $this->entityFieldManager->getFieldMapByFieldType('applenews_default');
-    return isset($map[$entity_type_id]) ? $map[$entity_type_id] : [];
+    $field_map = $this->entityFieldManager->getFieldMapByFieldType('applenews_default');
+    $entity_field_map = isset($field_map[$entity_type_id]) ? $field_map[$entity_type_id] : [];
+    if ($entity) {
+      foreach (array_keys($entity_field_map) as $field_name) {
+        // For cases like migration, entity might not have the field.
+        if (!$entity->hasField($field_name)) {
+          unset($entity_field_map[$field_name]);
+        }
+      }
+    }
+    return $entity_field_map;
   }
 
   /**
@@ -182,16 +202,10 @@ class ApplenewsManager {
    *   The entity to be sync'd.
    */
   protected function syncToAppleNews(EntityInterface $entity) {
-    $fields = $this->getFields($entity->getEntityTypeId());
-    if (!$fields) {
-      return;
-    }
+    $fields = $this->getFields($entity->getEntityTypeId(), $entity);
+
     /** @var \Drupal\Core\Entity\ContentEntityInterface $entity $fields */
-    foreach ($fields as $field_name => $detail) {
-      // For cases like migration, entity might not have the field.
-      if (!$entity->hasField($field_name)) {
-        continue;
-      }
+    foreach (array_keys($fields) as $field_name) {
       $field = $entity->get($field_name);
       if ($field->status) {
         // Post the article to Apple News.
@@ -316,11 +330,9 @@ class ApplenewsManager {
    *   Response object.
    */
   public function delete(EntityInterface $entity) {
-    $fields = $this->getFields($entity->getEntityTypeId());
-    if (!$fields) {
-      return FALSE;
-    }
-    foreach ($fields as $field_name => $detail) {
+    $fields = $this->getFields($entity->getEntityTypeId(), $entity);
+
+    foreach (array_keys($fields) as $field_name) {
       $article = self::getArticle($entity, $field_name);
       if ($article) {
         // Delete article from remote.
