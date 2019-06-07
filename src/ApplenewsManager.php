@@ -13,6 +13,7 @@ use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Psr\Log\LoggerInterface;
@@ -67,6 +68,13 @@ class ApplenewsManager {
   protected $logger;
 
   /**
+   * Messenger service for showing messages to the user.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * ApplenewsManager constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -83,8 +91,10 @@ class ApplenewsManager {
    *   Apple news publisher.
    * @param \Psr\Log\LoggerInterface $logger
    *   Logger.
+   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   *   Messenger service for showing messages to the user.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, TranslationInterface $string_translation, Serializer $serializer, PublisherInterface $publisher, LoggerInterface $logger) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, ConfigFactoryInterface $config_factory, TranslationInterface $string_translation, Serializer $serializer, PublisherInterface $publisher, LoggerInterface $logger, MessengerInterface $messenger) {
     $this->entityTypeManager = $entity_type_manager;
     $this->entityFieldManager = $entity_field_manager;
     $this->config = $config_factory->get('applenews.settings');
@@ -92,6 +102,7 @@ class ApplenewsManager {
     $this->serializer = $serializer;
     $this->publisher = $publisher;
     $this->logger = $logger;
+    $this->messenger = $messenger;
   }
 
   /**
@@ -125,8 +136,17 @@ class ApplenewsManager {
     /** @var \Drupal\Core\Entity\ContentEntityInterface $entity $fields */
     foreach (array_keys($fields) as $field_name) {
       $field = $entity->get($field_name);
-      // Force preview if we can determine that the entity is unpublished.
-      $field->is_preview = $field->is_preview || ($entity instanceof EntityPublishedInterface && !$entity->isPublished());
+      // Force set preview when we can determine that the entity is unpublished.
+      if (!$field->is_preview && $entity instanceof EntityPublishedInterface && !$entity->isPublished()) {
+        $field->is_preview = TRUE;
+        $this->messenger->addMessage('Apple News article was automatically set to Preview since this content is unpublished.');
+      }
+      // Force unset preview when we can determine that the entity changes from
+      // unpublished to published.
+      elseif ($field->is_preview && $entity instanceof EntityPublishedInterface && isset($entity->original) && !$entity->original->isPublished() && $entity->isPublished()) {
+        $field->is_preview = FALSE;
+        $this->messenger->addMessage('Apple News article was automatically set to Published since this content was changed to published.');
+      }
     }
   }
 
