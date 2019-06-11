@@ -228,6 +228,15 @@ class ApplenewsManager {
     foreach (array_keys($fields) as $field_name) {
       $field = $entity->get($field_name);
       if ($field->status) {
+        // Check if we are going from Live to Preview. Apple doesn't support
+        // updating a Live article to Preview, so we have to first delete the
+        // article.
+        // @see https://developer.apple.com/documentation/apple_news/update_an_article
+        if (isset($entity->original) && ($field_original = $entity->original->get($field_name)) && !$field_original->is_preview && $field->is_preview) {
+          $this->deleteByField($entity, $field);
+          unset($field->article);
+        }
+
         // Post the article to Apple News.
         $this->saveToAppleNews($entity, $field);
       }
