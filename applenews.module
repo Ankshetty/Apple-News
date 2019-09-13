@@ -703,3 +703,10 @@ function applenews_applenews_api() {
     ],
   ];
 }
+
+/**
+ * Implements hook_flush_caches().
+ */
+function applenews_flush_caches() {
+  return array('cache_applenews');
+}
