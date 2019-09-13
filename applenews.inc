@@ -70,7 +70,7 @@ function applenews_export_save(ApplenewsExport $export) {
         ])
         ->execute();
     }
-    // @todo just need to flush cache.
+    cache_clear_all('*', 'cache_applenews', TRUE);
     return TRUE;
   }
   catch (Exception $e) {
@@ -964,13 +964,8 @@ function applenews_channels($grouped = FALSE) {
  */
 function applenews_cleanup_data(stdClass $channel) {
 
-  // Delete from custom cache table.
-  db_delete('cache_applenews')
-    ->condition('cid', 'channel_' . $channel->id)
-    ->execute();
-  db_delete('cache_applenews')
-    ->condition('cid', 'sections_' . $channel->id)
-    ->execute();
+  cache_clear_all('channel_' . $channel->id, 'cache_applenews');
+  cache_clear_all('sections_' . $channel->id, 'cache_applenews');
   // Delete settings when channel ID removed.
   $result = db_select('applenews_status', 's')
       ->fields('s')

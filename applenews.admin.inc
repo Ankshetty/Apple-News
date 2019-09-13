@@ -186,7 +186,7 @@ function applenews_settings_delete_configuration_form_submit($form, &$form_state
     variable_del($key);
   }
   // Remove data from custom cache table.
-  db_truncate('cache_applenews')->execute();
+  cache_clear_all('*', 'cache_applenews', TRUE);
   // Remove associated data.
   $chnnels_all = applenews_channels();
   foreach ($chnnels_all as $channel_id => $name) {
