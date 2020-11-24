@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\migrate\MigrateSkipRowException;
 use Drupal\migrate\Plugin\MigrateSourceInterface;
@@ -42,6 +43,10 @@ function applenews_help($route_name, RouteMatchInterface $route_match) {
  * Implements hook_entity_presave().
  */
 function applenews_entity_presave(EntityInterface $entity) {
+  if (!$entity instanceof FieldableEntityInterface) {
+    return;
+  }
+
   /** @var \Drupal\applenews\ApplenewsManager $manager */
   $manager = \Drupal::service('applenews.manager');
   $manager->entityPreSave($entity);
@@ -51,6 +56,10 @@ function applenews_entity_presave(EntityInterface $entity) {
  * Implements hook_entity_insert().
  */
 function applenews_entity_insert(EntityInterface $entity) {
+  if (!$entity instanceof FieldableEntityInterface) {
+    return;
+  }
+
   /** @var \Drupal\applenews\ApplenewsManager $manager */
   $manager = \Drupal::service('applenews.manager');
   $manager->entitySave($entity);
@@ -60,6 +69,10 @@ function applenews_entity_insert(EntityInterface $entity) {
  * Implements hook_entity_update().
  */
 function applenews_entity_update(EntityInterface $entity) {
+  if (!$entity instanceof FieldableEntityInterface) {
+    return;
+  }
+
   /** @var \Drupal\applenews\ApplenewsManager $manager */
   $manager = \Drupal::service('applenews.manager');
   $manager->entitySave($entity);
@@ -69,6 +82,9 @@ function applenews_entity_update(EntityInterface $entity) {
  * Implements hook_entity_delete().
  */
 function applenews_entity_delete(EntityInterface $entity) {
+  if (!$entity instanceof FieldableEntityInterface) {
+    return;
+  }
 
   try {
     /** @var \Drupal\applenews\ApplenewsManager $manager */
