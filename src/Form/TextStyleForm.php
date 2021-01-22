@@ -44,7 +44,7 @@ class TextStyleForm extends EntityForm {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity.manager')->getStorage('applenews_text_style')
+      $container->get('entity_type.manager')->getStorage('applenews_text_style')
     );
   }
 
@@ -274,7 +274,7 @@ class TextStyleForm extends EntityForm {
   public function save(array $form, FormStateInterface $form_state) {
     // @todo: make sure to avoid saving default values.
     parent::save($form, $form_state);
-    $form_state->setRedirectUrl($this->entity->urlInfo('collection'));
+    $form_state->setRedirectUrl($this->entity->toUrl('collection'));
   }
 
 }

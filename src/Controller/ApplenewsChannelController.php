@@ -59,7 +59,7 @@ class ApplenewsChannelController extends ControllerBase {
       $this->messenger()->addError($this->t('Error while trying to refreshed the %label channel details.', ['%label' => $applenews_channel->label()]));
     }
 
-    return new RedirectResponse($applenews_channel->urlInfo('collection')->toString());
+    return new RedirectResponse($applenews_channel->toUrl('collection')->toString());
   }
 
 }

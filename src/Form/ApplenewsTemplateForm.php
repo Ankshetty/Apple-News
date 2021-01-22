@@ -393,7 +393,7 @@ class ApplenewsTemplateForm extends EntityForm {
     }
 
     $this->entity->save();
-    drupal_set_message('Component added successfully.');
+    $this->messenger()->addStatus('Component added successfully.');
     $form_state->setRebuild();
   }
 
@@ -465,7 +465,7 @@ class ApplenewsTemplateForm extends EntityForm {
     else {
       $this->saveComponentOrder($form_state);
     }
-    drupal_set_message('Component deleted.');
+    $this->messenger()->addStatus('Component deleted.');
     $form_state->setRebuild();
   }
 

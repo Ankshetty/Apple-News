@@ -42,4 +42,4 @@ services:
     arguments: ['@config.factory']
   applenews.preview_builder:
     class: Drupal\applenews\ApplenewsPreviewBuilder
-    arguments: ['@config.factory', '@file_system']
+    arguments: ['@config.factory', '@file_system', '@stream_wrapper_manager']
