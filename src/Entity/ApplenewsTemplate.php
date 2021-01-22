@@ -30,6 +30,12 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *    "add-form" = "/admin/config/services/applenews/template/add",
  *    "edit-form" = "/admin/config/services/applenews/template/{applenews_template}",
  *    "delete-form" = "/admin/config/services/applenews/template/{applenews_template}/delete"
+ *   },
+ *   config_export = {
+ *     "id",
+ *     "label",
+ *     "components",
+ *     "node_type"
  *  }
  * )
  */
